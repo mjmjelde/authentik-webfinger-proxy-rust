@@ -32,7 +32,7 @@ RUN apt-get update && apt-get install -y \
 RUN useradd -r -s /bin/false appuser
 
 # Copy the binary from builder stage
-COPY --from=builder /app/target/release/authentik-webfinger-proxy /usr/local/bin/authentik-webfinger-proxy
+COPY --from=builder /app/target/release/authentik-webfinger-proxy-rust /usr/local/bin/authentik-webfinger-proxy
 
 # Change ownership and make executable
 RUN chown appuser:appuser /usr/local/bin/authentik-webfinger-proxy
