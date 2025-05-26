@@ -1,5 +1,5 @@
 # Use the official Rust image as a builder
-FROM rust:latest as builder
+FROM rust:latest AS builder
 
 # Install required system dependencies
 RUN apt-get update && apt-get install -y \
