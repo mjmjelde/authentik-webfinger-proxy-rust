@@ -1,10 +1,12 @@
 use axum::{
-    extract::Query,
+    extract::{OriginalUri, Query},
     http::StatusCode,
     response::Json,
     routing::get,
     Router,
 };
+use axum_extra::TypedHeader;
+use headers::Host;
 use serde::{Deserialize, Serialize};
 use std::env;
 use tokio::net::TcpListener;
@@ -28,15 +30,23 @@ struct WebFingerQuery {
     resource: Option<String>,
 }
 
-async fn webfinger_handler(Query(params): Query<WebFingerQuery>) -> Result<Json<WebFingerResponse>, StatusCode> {
+async fn webfinger_handler(
+    TypedHeader(host): TypedHeader<Host>,
+    OriginalUri(uri): OriginalUri,
+    Query(params): Query<WebFingerQuery>,
+) -> Result<Json<WebFingerResponse>, StatusCode> {
+    let full_url = format!("http://{}{}", host, uri);
+
+    info!("WebFinger endpoint accessed: {}", full_url);
+
     let resource = match params.resource {
         Some(res) if res.starts_with("acct:") => res,
         Some(_) => {
-            warn!("Invalid resource format, must start with 'acct:'");
+            warn!("Invalid resource format, must start with 'acct:' - URL: {}", full_url);
             return Err(StatusCode::BAD_REQUEST);
         }
         None => {
-            warn!("Missing resource parameter");
+            warn!("Missing resource parameter - URL: {}", full_url);
             return Err(StatusCode::BAD_REQUEST);
         }
     };
@@ -45,7 +55,7 @@ async fn webfinger_handler(Query(params): Query<WebFingerQuery>) -> Result<Json<
     let issuer_url = format!("https://{}/application/o/tailscale/", domain);
 
     let response = WebFingerResponse {
-        subject: resource,
+        subject: resource.clone(),
         links: vec![
             Link {
                 rel: "http://openid.net/specs/connect/1.0/issuer".to_string(),
@@ -70,7 +80,7 @@ async fn webfinger_handler(Query(params): Query<WebFingerQuery>) -> Result<Json<
         ],
     };
 
-    info!("WebFinger request processed for resource: {}", response.subject);
+    info!("WebFinger request processed successfully - Resource: '{}', URL: {}", resource, full_url);
     Ok(Json(response))
 }
 
